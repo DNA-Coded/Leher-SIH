@@ -86,6 +86,12 @@ def test_full_pipeline_success(tmp_path, monkeypatch):
     assert (ds_dir / "manifest.json").exists()
     assert (ds_dir / "temperature.zarr").exists()
     assert (ds_dir / "current_speed.zarr").exists()
+    assert (ds_dir / "bottom_temperature.zarr").exists()
+    assert (ds_dir / "sea_ice_fraction.zarr").exists()
+    assert (ds_dir / "sea_ice_thickness.zarr").exists()
+    assert (ds_dir / "sea_surface_height.zarr").exists()
+    assert (ds_dir / "mixed_layer_depth.zarr").exists()
+    assert (ds_dir / "salinity.zarr").exists()
 
 def test_pipeline_validation_failure_bad_depth(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)

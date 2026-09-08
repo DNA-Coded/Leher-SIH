@@ -81,6 +81,10 @@ def load_surface_snapshot(fabric_dir: Path = Path("fabric")) -> pl.DataFrame:
         surface_vars.append("salinity")
     if "current_speed" in available_vars:
         surface_vars.append("current_speed")
+    if "sea_surface_height" in available_vars:
+        surface_vars.append("sea_surface_height")
+    if "mixed_layer_depth" in available_vars:
+        surface_vars.append("mixed_layer_depth")
         
     # Read surface layer
     ds_surface = read_samudra_slice(
@@ -112,6 +116,8 @@ def load_surface_snapshot(fabric_dir: Path = Path("fabric")) -> pl.DataFrame:
         "u_velocity": "uo",
         "v_velocity": "vo",
         "salinity": "surface_salinity",
+        "sea_surface_height": "zos",
+        "mixed_layer_depth": "mlotst",
     }
     # Only rename existing columns
     rename_map = {k: v for k, v in rename_map.items() if k in df_merged.columns}
@@ -152,6 +158,10 @@ def coarsen_to_grid(df: pl.DataFrame, grid_deg: float = GRID_DEG) -> pl.DataFram
         agg_exprs.append(pl.col("thermal_contrast").mean().alias("thermal_contrast"))
     if "current_speed" in df.columns:
         agg_exprs.append(pl.col("current_speed").mean().alias("current_speed"))
+    if "zos" in df.columns:
+        agg_exprs.append(pl.col("zos").mean().alias("zos"))
+    if "mlotst" in df.columns:
+        agg_exprs.append(pl.col("mlotst").mean().alias("mlotst"))
 
     df = df.group_by(["lat_grid", "lon_grid"]).agg(agg_exprs)
     

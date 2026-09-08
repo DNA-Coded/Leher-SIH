@@ -36,6 +36,9 @@ def convert_to_zarr(ds: xr.Dataset, source_name: str, revision: str) -> tuple[Pa
         "vo": "v_velocity",
         "zos": "sea_surface_height",
         "mlotst": "mixed_layer_depth",
+        "bottomT": "bottom_temperature",
+        "siconc": "sea_ice_fraction",
+        "sithick": "sea_ice_thickness",
     }
 
     manifest_vars = []

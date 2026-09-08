@@ -116,9 +116,17 @@ def build_inference_features(surface_df: pl.DataFrame) -> pl.DataFrame:
         pl.col("uo").alias("surface_uo"),
         pl.col("vo").alias("surface_vo"),
         pl.lit(0.0).alias("vorticity"),      # simplified
-        pl.lit(float("nan")).alias("zos"),   # not in training parquet
-        pl.lit(float("nan")).alias("mlotst"),# not in training parquet
     ]
+    
+    if "zos" in surface_df.columns:
+        exprs.append(pl.col("zos").alias("zos"))
+    else:
+        exprs.append(pl.lit(float("nan")).alias("zos"))
+        
+    if "mlotst" in surface_df.columns:
+        exprs.append(pl.col("mlotst").alias("mlotst"))
+    else:
+        exprs.append(pl.lit(float("nan")).alias("mlotst"))
     
     if "temp_100m" in surface_df.columns:
         exprs.append(pl.col("temp_100m").alias("temp_100m"))
