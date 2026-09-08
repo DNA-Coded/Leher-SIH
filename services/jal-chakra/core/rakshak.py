@@ -111,19 +111,34 @@ def build_inference_features(surface_df: pl.DataFrame) -> pl.DataFrame:
     Build the feature vector for every grid cell from the surface snapshot.
     Mirrors what feature_engineering.py does, but for the latest data only.
     """
-    # We don't have 100m data in the surface snapshot, so thermal_contrast = NaN
-    # XGBoost handles NaN natively.
-    df = surface_df.with_columns([
+    exprs = [
         pl.col("sst").alias("sst"),
-        pl.lit(float("nan")).alias("temp_100m"),
-        pl.lit(float("nan")).alias("thermal_contrast"),
-        (pl.col("uo") ** 2 + pl.col("vo") ** 2).sqrt().alias("current_speed"),
         pl.col("uo").alias("surface_uo"),
         pl.col("vo").alias("surface_vo"),
         pl.lit(0.0).alias("vorticity"),      # simplified
         pl.lit(float("nan")).alias("zos"),   # not in training parquet
         pl.lit(float("nan")).alias("mlotst"),# not in training parquet
-    ])
+    ]
+    
+    if "temp_100m" in surface_df.columns:
+        exprs.append(pl.col("temp_100m").alias("temp_100m"))
+    else:
+        exprs.append(pl.lit(float("nan")).alias("temp_100m"))
+        
+    if "thermal_contrast" in surface_df.columns:
+        exprs.append(pl.col("thermal_contrast").alias("thermal_contrast"))
+    else:
+        exprs.append(pl.lit(float("nan")).alias("thermal_contrast"))
+        
+    if "current_speed" in surface_df.columns:
+        exprs.append(pl.col("current_speed").alias("current_speed"))
+    else:
+        exprs.append((pl.col("uo") ** 2 + pl.col("vo") ** 2).sqrt().alias("current_speed"))
+        
+    if "surface_salinity" in surface_df.columns:
+        exprs.append(pl.col("surface_salinity").alias("surface_salinity"))
+
+    df = surface_df.with_columns(exprs)
 
     # Coastal proximity for surge model
     df = df.with_columns([

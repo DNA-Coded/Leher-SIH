@@ -48,39 +48,82 @@ class MissingInferenceDataError(Exception):
     """Raised when the expected inference input data is missing."""
     pass
 
-def load_surface_snapshot() -> pl.DataFrame:
+def load_surface_snapshot(fabric_dir: Path = Path("fabric")) -> pl.DataFrame:
     """
-    Load the surface layer (depth <= 5m) from the parquet dataset.
-    Uses the most recent timestamp available.
+    Load the inference snapshot from the active Samudra Zarr dataset.
+    Retrieves both surface layer and nearest native depth to 100m.
     """
-    print("[ZONES] Loading surface snapshot from parquet...")
+    if __package__:
+        from .samudra_reader import get_active_glorys_dataset, read_samudra_slice
+    else:
+        from pathlib import Path as _P
+        import sys
+        
+        # Add the parent directory of 'core' to sys.path if not already there
+        _core_parent = str(_P(__file__).resolve().parent.parent)
+        if _core_parent not in sys.path:
+            sys.path.insert(0, _core_parent)
+            
+        from core.samudra_reader import get_active_glorys_dataset, read_samudra_slice
     
-    # Safely check if files exist before scanning
-    if not list(PARQUET_DIR.glob("*.parquet")):
-        raise MissingInferenceDataError(
-            f"Missing inference input data: No parquet files found in {PARQUET_DIR}.\n"
-            "This pipeline currently hardcodes the training dataset path as its input source.\n"
-            "To fix this, either provide the full training dataset, or update the pipeline to read "
-            "from the future live Copernicus Zarr catalog."
-        )
-
-    lf = pl.scan_parquet(str(PARQUET_DIR / "*.parquet"))
-
-    # Get most recent time
-    latest_time = lf.select(pl.col("time").max()).collect().item()
-    print(f"  Most recent timestamp: {latest_time}")
-
-    # Surface layer at the latest time
-    df = (
-        lf.filter(
-            (pl.col("depth") <= 5.0) &
-            (pl.col("time") == latest_time)
-        )
-        .select(["latitude", "longitude", "thetao", "uo", "vo", "surface_temp"])
-        .collect()
+    try:
+        dataset_path, manifest = get_active_glorys_dataset(fabric_dir)
+    except Exception as e:
+        raise MissingInferenceDataError(f"Failed to find active inference dataset: {e}")
+        
+    print(f"[ZONES] Loading active dataset: {dataset_path.name} from Zarr...")
+    
+    # Determine available variables from manifest
+    available_vars = [v["canonical_name"] for v in manifest.get("variables", [])]
+    
+    surface_vars = ["temperature", "u_velocity", "v_velocity"]
+    if "salinity" in available_vars:
+        surface_vars.append("salinity")
+    if "current_speed" in available_vars:
+        surface_vars.append("current_speed")
+        
+    # Read surface layer
+    ds_surface = read_samudra_slice(
+        dataset_path, manifest, surface_vars, depth_m=0.0, time_str="latest"
     )
-    print(f"  Surface cells loaded: {len(df):,}")
-    return df
+    
+    # Read 100m layer for thermal contrast
+    ds_100m = read_samudra_slice(
+        dataset_path, manifest, ["temperature"], depth_m=100.0, time_str="latest"
+    )
+    
+    latest_time = ds_surface.time.values
+    print(f"  Most recent timestamp: {latest_time}")
+    
+    df_surface = ds_surface.to_dataframe().reset_index()
+    df_100m = ds_100m.to_dataframe().reset_index()
+    
+    # Merge 100m temp
+    df_100m = df_100m.rename(columns={"temperature": "temp_100m"})
+    df_100m = df_100m[["latitude", "longitude", "temp_100m"]]
+    df_merged = df_surface.merge(df_100m, on=["latitude", "longitude"], how="left")
+    
+    # Calculate thermal contrast
+    df_merged["thermal_contrast"] = df_merged["temperature"] - df_merged["temp_100m"]
+    
+    # Rename to old internal expectations
+    rename_map = {
+        "temperature": "thetao",
+        "u_velocity": "uo",
+        "v_velocity": "vo",
+        "salinity": "surface_salinity",
+    }
+    # Only rename existing columns
+    rename_map = {k: v for k, v in rename_map.items() if k in df_merged.columns}
+    df_merged = df_merged.rename(columns=rename_map)
+    
+    # Ensure surface_temp exists as old logic had it (even if unused)
+    if "surface_temp" not in df_merged.columns:
+        df_merged["surface_temp"] = df_merged["thetao"]
+
+    pdf = pl.from_pandas(df_merged)
+    print(f"  Surface cells loaded: {len(pdf):,}")
+    return pdf
 
 
 def coarsen_to_grid(df: pl.DataFrame, grid_deg: float = GRID_DEG) -> pl.DataFrame:
@@ -92,20 +135,32 @@ def coarsen_to_grid(df: pl.DataFrame, grid_deg: float = GRID_DEG) -> pl.DataFram
         (pl.col("latitude") / grid_deg).round(0).cast(pl.Int32) * grid_deg,
         (pl.col("longitude") / grid_deg).round(0).cast(pl.Int32) * grid_deg,
     ])
-    # Rename after rounding
     df = df.rename({"latitude": "lat_grid", "longitude": "lon_grid"})
 
-    df = (
-        df.group_by(["lat_grid", "lon_grid"])
-        .agg([
-            pl.col("thetao").mean().alias("sst"),
-            pl.col("uo").mean().alias("uo"),
-            pl.col("vo").mean().alias("vo"),
-        ])
-        .with_columns([
+    agg_exprs = [
+        pl.col("thetao").mean().alias("sst"),
+        pl.col("uo").mean().alias("uo"),
+        pl.col("vo").mean().alias("vo"),
+    ]
+    
+    # Optional fields
+    if "surface_salinity" in df.columns:
+        agg_exprs.append(pl.col("surface_salinity").mean().alias("surface_salinity"))
+    if "temp_100m" in df.columns:
+        agg_exprs.append(pl.col("temp_100m").mean().alias("temp_100m"))
+    if "thermal_contrast" in df.columns:
+        agg_exprs.append(pl.col("thermal_contrast").mean().alias("thermal_contrast"))
+    if "current_speed" in df.columns:
+        agg_exprs.append(pl.col("current_speed").mean().alias("current_speed"))
+
+    df = df.group_by(["lat_grid", "lon_grid"]).agg(agg_exprs)
+    
+    # Re-calculate current_speed if not already provided by Zarr
+    if "current_speed" not in df.columns:
+        df = df.with_columns([
             (pl.col("uo") ** 2 + pl.col("vo") ** 2).sqrt().alias("current_speed"),
         ])
-    )
+        
     print(f"  Coarsened to {len(df):,} grid cells at {grid_deg}° resolution")
     return df
 
