@@ -1,6 +1,6 @@
 import json
 import polars as pl
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, FileResponse
 from apps.api.leher.paths import (
     HAZARDS_PARQUET,
@@ -8,6 +8,7 @@ from apps.api.leher.paths import (
     ECOSYSTEM_JSON,
     RAKSHAK_RUN_JSON,
 )
+from apps.api.leher.jobs.rakshak_job import execute_rakshak_job, _rakshak_lock
 
 router = APIRouter(tags=["ML"])
 
@@ -63,3 +64,18 @@ def get_run_status():
         return JSONResponse(content=data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/run")
+def trigger_run(request: Request):
+    if _rakshak_lock.locked():
+        return JSONResponse(
+            content={"status": "skipped", "reason": "rakshak_run_already_in_progress"}
+        )
+    
+    scheduler = request.app.state.scheduler
+    scheduler.add_job(
+        execute_rakshak_job,
+        id="rakshak_manual_run",
+        replace_existing=True
+    )
+    return JSONResponse(content={"status": "accepted"})
