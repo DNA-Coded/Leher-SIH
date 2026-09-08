@@ -39,6 +39,7 @@ def convert_to_zarr(ds: xr.Dataset, source_name: str, revision: str) -> tuple[Pa
         "bottomT": "bottom_temperature",
         "siconc": "sea_ice_fraction",
         "sithick": "sea_ice_thickness",
+        "chl": "chlorophyll",
     }
 
     manifest_vars = []

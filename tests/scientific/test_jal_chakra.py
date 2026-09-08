@@ -154,7 +154,16 @@ def test_copernicus_acquisition_mocked(mock_subset, tmp_path):
     def mock_subset_side_effect(**kwargs):
         output_dir = Path(kwargs['output_directory'])
         filename = kwargs['output_filename']
-        (output_dir / filename).touch()
+        import xarray as xr
+        import numpy as np
+        coords = {
+            "time": [np.datetime64("2024-01-01T12:00:00")],
+            "depth": [0.49],
+            "latitude": [10.0],
+            "longitude": [80.0]
+        }
+        ds = xr.Dataset({"dummy": (("time", "depth", "latitude", "longitude"), np.zeros((1, 1, 1, 1)))}, coords=coords)
+        ds.to_netcdf(output_dir / filename)
         
     mock_subset.side_effect = mock_subset_side_effect
     
@@ -164,8 +173,8 @@ def test_copernicus_acquisition_mocked(mock_subset, tmp_path):
         end_datetime="2024-01-01T23:59:59"
     )
     
-    # Assert copernicusmarine.subset was called with expected boundaries
-    mock_subset.assert_called_once()
+    # Assert copernicusmarine.subset was called twice (physical + bio)
+    assert mock_subset.call_count == 2
     kwargs = mock_subset.call_args.kwargs
     assert kwargs["minimum_longitude"] == 20.0
     assert kwargs["maximum_longitude"] == 130.0

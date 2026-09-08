@@ -145,6 +145,11 @@ def build_inference_features(surface_df: pl.DataFrame) -> pl.DataFrame:
         
     if "surface_salinity" in surface_df.columns:
         exprs.append(pl.col("surface_salinity").alias("surface_salinity"))
+        
+    if "chl" in surface_df.columns:
+        exprs.append(pl.col("chl").alias("chl"))
+    else:
+        exprs.append(pl.lit(float("nan")).alias("chl"))
 
     df = surface_df.with_columns(exprs)
 

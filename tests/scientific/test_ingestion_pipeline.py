@@ -30,7 +30,7 @@ def create_synthetic_netcdf(output_path: Path, bad_fill_value: bool = False, mis
     ds = xr.Dataset(coords=coords)
     
     # Vars
-    vars_to_add = ["thetao", "so", "uo", "vo", "zos", "mlotst", "bottomT", "siconc", "sithick"]
+    vars_to_add = ["thetao", "so", "uo", "vo", "zos", "mlotst", "bottomT", "siconc", "sithick", "chl"]
     if missing_var:
         vars_to_add.remove("thetao")
         

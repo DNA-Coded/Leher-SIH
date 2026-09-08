@@ -90,9 +90,10 @@ def main():
         surface_salinity = row["surface_salinity"]  # Fetched! (so)
         
         # Placeholders for variables that require the live Copernicus API connection
-        zos = np.nan       # Sea-surface height above geoid
-        mlotst = np.nan    # Density mixed-layer thickness
-        bottomT = np.nan   # Sea-floor temperature
+        zos = row.get("zos", np.nan) if "zos" in features_df.columns else np.nan
+        mlotst = row.get("mlotst", np.nan) if "mlotst" in features_df.columns else np.nan
+        bottomT = row.get("bottomT", np.nan) if "bottomT" in features_df.columns else np.nan
+        chl = row.get("chl", np.nan) if "chl" in features_df.columns else np.nan
         siconc = np.nan    # Sea-ice concentration (Not applicable in Indian Ocean)
         sithick = np.nan   # Sea-ice thickness
         
@@ -138,10 +139,10 @@ def main():
         print(f"Eastward Curr (uo)  : {surface_uo:.2f} m/s")
         print(f"Northward Curr (vo) : {surface_vo:.2f} m/s")
         print(f"Thermal Contrast    : {thermal_contrast:.2f} °C")
-        print(f"Sea Sfc Height (zos): [Awaiting Live Copernicus API]")
-        print(f"Mixed Layer (mlotst): [Awaiting Live Copernicus API]")
-        print(f"Bottom Temp (bottomT): [Awaiting Live Copernicus API]")
-        print(f"Chlorophyll (chl)   : [Awaiting Live Copernicus Bio API]")
+        print(f"Sea Sfc Height (zos): {zos:.2f} m" if not np.isnan(zos) else "Sea Sfc Height (zos): [Awaiting Live Copernicus API]")
+        print(f"Mixed Layer (mlotst): {mlotst:.2f} m" if not np.isnan(mlotst) else "Mixed Layer (mlotst): [Awaiting Live Copernicus API]")
+        print(f"Bottom Temp (bottomT): {bottomT:.2f} °C" if not np.isnan(bottomT) else "Bottom Temp (bottomT): [Awaiting Live Copernicus API]")
+        print(f"Chlorophyll (chl)   : {chl:.2f} mg/m³" if not np.isnan(chl) else "Chlorophyll (chl)   : [Awaiting Live Copernicus Bio API]")
         print(f"Sea Ice (siconc)    : [Not Applicable in Indian Ocean]")
         
         print("\n" + "=" * 60)

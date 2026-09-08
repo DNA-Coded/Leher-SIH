@@ -85,6 +85,8 @@ def load_surface_snapshot(fabric_dir: Path = Path("fabric")) -> pl.DataFrame:
         surface_vars.append("sea_surface_height")
     if "mixed_layer_depth" in available_vars:
         surface_vars.append("mixed_layer_depth")
+    if "chlorophyll" in available_vars:
+        surface_vars.append("chlorophyll")
         
     # Read surface layer
     ds_surface = read_samudra_slice(
@@ -118,6 +120,7 @@ def load_surface_snapshot(fabric_dir: Path = Path("fabric")) -> pl.DataFrame:
         "salinity": "surface_salinity",
         "sea_surface_height": "zos",
         "mixed_layer_depth": "mlotst",
+        "chlorophyll": "chl",
     }
     # Only rename existing columns
     rename_map = {k: v for k, v in rename_map.items() if k in df_merged.columns}
