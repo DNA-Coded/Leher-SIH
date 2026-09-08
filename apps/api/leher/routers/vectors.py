@@ -26,7 +26,9 @@ from core.samudra_reader import (
 router = APIRouter(tags=["Vector Slices"])
 
 _slice_cache = {}
-CACHE_TTL = 300
+
+from apps.api.leher.config import CACHE_TTL_SECONDS as CACHE_TTL
+
 
 @router.get("/slices", responses={200: {"content": {"application/vnd.apache.arrow.stream": {}}}})
 def get_vector_slice(

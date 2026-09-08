@@ -54,6 +54,10 @@ def test_valid_vector_slice_request_arrow_round_trip(mock_fabric, monkeypatch):
     from apps.api.leher.paths import REPO_ROOT
     monkeypatch.setattr("apps.api.leher.routers.vectors.REPO_ROOT", mock_fabric.parent)
     
+    # Clear cache to prevent cross-test contamination
+    from apps.api.leher.routers import vectors
+    vectors._slice_cache.clear()
+    
     response = client.get(
         "/api/v1/vectors/slices",
         params={

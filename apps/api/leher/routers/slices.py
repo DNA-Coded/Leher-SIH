@@ -25,9 +25,10 @@ from core.samudra_reader import (
 
 router = APIRouter(tags=["Model Slices"])
 
-# A simple 5-minute TTL cache (in-memory) for slice requests
+# A simple in-memory TTL cache for slice requests
 _slice_cache = {}
-CACHE_TTL = 300
+
+from apps.api.leher.config import CACHE_TTL_SECONDS as CACHE_TTL
 
 @router.get("/slices", responses={200: {"content": {"application/vnd.apache.arrow.stream": {}}}})
 def get_model_slice(
