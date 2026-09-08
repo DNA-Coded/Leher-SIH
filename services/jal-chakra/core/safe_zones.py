@@ -44,12 +44,26 @@ def _haversine_deg(lat1, lon1, lat2, lon2) -> float:
     return np.sqrt(dlat**2 + dlon**2)
 
 
+class MissingInferenceDataError(Exception):
+    """Raised when the expected inference input data is missing."""
+    pass
+
 def load_surface_snapshot() -> pl.DataFrame:
     """
     Load the surface layer (depth <= 5m) from the parquet dataset.
     Uses the most recent timestamp available.
     """
     print("[ZONES] Loading surface snapshot from parquet...")
+    
+    # Safely check if files exist before scanning
+    if not list(PARQUET_DIR.glob("*.parquet")):
+        raise MissingInferenceDataError(
+            f"Missing inference input data: No parquet files found in {PARQUET_DIR}.\n"
+            "This pipeline currently hardcodes the training dataset path as its input source.\n"
+            "To fix this, either provide the full training dataset, or update the pipeline to read "
+            "from the future live Copernicus Zarr catalog."
+        )
+
     lf = pl.scan_parquet(str(PARQUET_DIR / "*.parquet"))
 
     # Get most recent time

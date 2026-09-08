@@ -4,3 +4,8 @@ polars
 pytest
 httpx
 apscheduler
+xarray
+zarr
+copernicusmarine
+netCDF4
+numpy
