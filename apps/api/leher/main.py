@@ -38,8 +38,9 @@ app.state.scheduler = scheduler
 app.include_router(ml.router, prefix="/api/v1/ml")
 app.include_router(catalog.router, prefix="/api/v1/catalog")
 
-from apps.api.leher.routers import slices
+from apps.api.leher.routers import slices, vectors
 app.include_router(slices.router, prefix="/api/v1/model")
+app.include_router(vectors.router, prefix="/api/v1/vectors")
 
 @app.get("/health")
 def health():
