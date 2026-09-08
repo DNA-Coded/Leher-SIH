@@ -1438,13 +1438,16 @@ graph TD
         DETECT["Anomaly Detection<br/>XGBoost / 1D-CNN"]
         ZONE["Safe Zone Engine<br/>Green / Yellow / Red"]
         LLM["LLM + TTS Engine<br/>Voice Advisory"]
+        ECO["Ecosystem Health<br/>Composite Stress Model"]
 
         SCAN --> DETECT --> ZONE --> LLM
+        ZONE --> ECO
     end
 
     subgraph Storage["Hazard Storage"]
         PARQ[("fabric/ml/hazards.parquet")]
         AUDIO[("fabric/ml/audio/*.mp3")]
+        ECOJSON[("fabric/ml/ecosystem.json")]
     end
 
     subgraph Output["Delivery"]
@@ -1456,8 +1459,10 @@ graph TD
     DATA --> SCAN
     LLM --> PARQ
     LLM --> AUDIO
+    ECO --> ECOJSON
     PARQ --> APIML
     AUDIO --> APIML
+    ECOJSON --> APIML
     APIML --> GLOBE
     APIML --> PANEL
 
@@ -1467,8 +1472,8 @@ graph TD
     classDef output fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
 
     class DATA input;
-    class SCAN,DETECT,ZONE,LLM engine;
-    class PARQ,AUDIO store;
+    class SCAN,DETECT,ZONE,LLM,ECO engine;
+    class PARQ,AUDIO,ECOJSON store;
     class APIML,GLOBE,PANEL output;
 ```
 
@@ -1803,6 +1808,40 @@ In future phases, the AI voice advisories can be delivered directly to fishermen
 | GET | /api/v1/ml/nearest_assets/{vessel_id} | Find nearest CG station, helicopter, safe harbor |
 | GET | /api/v1/ml/rescue_vectors/{event_id} | GeoJSON lines from at-risk vessels to safe harbors |
 | POST | /api/v1/ml/broadcast/{event_id} | Trigger multi-language voice broadcast for an event |
+
+---
+
+## 23B. Marine Ecosystem Health Engine
+
+To monitor long-term impacts on the marine environment, the Rakshak module includes a composite Marine Ecosystem Health Engine (Engine 6) that evaluates each grid cell to produce a 0-100 Ecosystem Stress Score.
+
+### 23B.1 The Four Sub-Models
+
+1. **Coral Bleaching Risk (30% weight)**
+   - Computes thermal stress using NOAA Coral Reef Watch methodologies.
+   - Monitors `sst` against known bleaching thresholds (e.g., Watch at 29°C, Warning at 30°C, Alert at 31°C).
+
+2. **Harmful Algal Bloom (HAB) Risk (25% weight)**
+   - Flags conditions favoring rapid, toxic algae growth: warm water (`sst`), stagnancy (low `current_speed`), and moderate salinity (`so`). 
+   - Amplified by chlorophyll concentrations (`chl`) when available from the Copernicus biogeochemical dataset.
+
+3. **Fish Migration Stress (25% weight)**
+   - Tracks heat stress pushing pelagic fish deeper (above 30°C) and cold stress (below 24°C).
+   - Monitors thermal stratification disruption and high current stress.
+
+4. **Hypoxia / Dead Zone Risk (20% weight)**
+   - Acts as a proxy for dissolved oxygen depletion.
+   - Flags zones where high sea surface temperatures and stagnant currents reduce oxygen retention capacity.
+
+### 23B.2 Output Classification
+
+Grid cells are scored and mapped to a status for frontend rendering:
+- **HEALTHY** (🟢): Score < 30
+- **MODERATE** (🟡): 30 ≤ Score < 50
+- **STRESSED** (🟠): 50 ≤ Score < 70
+- **CRITICAL** (🔴): Score ≥ 70
+
+Output is stored in `fabric/ml/ecosystem.json` and served via `/api/v1/ml/ecosystem`.
 
 ---
 
