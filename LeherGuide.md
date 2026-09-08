@@ -348,6 +348,9 @@ This is the primary physics data source. It provides:
 | `vo` | northward_sea_water_velocity | m s⁻¹ | Northward current component |
 | `zos` | sea_surface_height_above_geoid | m | Sea surface height anomaly |
 | `mlotst` | ocean_mixed_layer_thickness | m | Mixed layer depth (turbocline) |
+| `bottomT` | sea_water_potential_temperature_at_sea_floor | °C | Sea-floor temperature |
+| `siconc` | sea_ice_area_fraction | % | Sea-ice concentration |
+| `sithick` | sea_ice_thickness | m | Sea-ice thickness |
 
 GLORYS12 has 50 vertical levels from 0.5m to 5727.9m. These native levels are preserved in the Zarr store and are not interpolated to arbitrary user-defined depths. Instead, depth requests are resolved to the nearest native level.
 
@@ -421,7 +424,7 @@ import copernicusmarine
 
 copernicusmarine.subset(
     dataset_id="cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
-    variables=["thetao", "so", "uo", "vo", "zos"],
+    variables=["thetao", "so", "uo", "vo", "zos", "mlotst", "bottomT", "siconc", "sithick"],
     minimum_longitude=20.0,
     maximum_longitude=130.0,
     minimum_latitude=-40.0,
@@ -1566,8 +1569,8 @@ For each cyclone track record (date + location), download the GLORYS model field
 ```python
 for track_row in cyclone_tracks.itertuples():
     copernicusmarine.subset(
-        dataset_id="cmems_mod_glo_phy_my_0.083deg_P1D-m",
-        variables=["thetao", "so", "uo", "vo", "zos", "mlotst"],
+        dataset_id="cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
+        variables=["thetao", "so", "uo", "vo", "zos", "mlotst", "bottomT", "siconc", "sithick"],
         minimum_longitude=track_row.lon - 5,
         maximum_longitude=track_row.lon + 5,
         minimum_latitude=track_row.lat - 5,

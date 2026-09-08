@@ -63,7 +63,7 @@ import copernicusmarine
 
 copernicusmarine.subset(
     dataset_id="cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
-    variables=["thetao", "so", "uo", "vo", "zos"],
+    variables=["thetao", "so", "uo", "vo", "zos", "mlotst", "bottomT", "siconc", "sithick"],
     minimum_longitude=20.0,
     maximum_longitude=130.0,
     minimum_latitude=-40.0,
@@ -84,14 +84,14 @@ copernicusmarine.subset(
 import xarray as xr
 
 ds = xr.open_dataset("fabric/raw/copernicus/glorys/raw_glorys_20240101.nc")
-print(ds)                    # Should show thetao, so, uo, vo, zos
+print(ds)                    # Should show thetao, so, uo, vo, zos, mlotst, bottomT, siconc, sithick
 print(ds.dims)               # Should show time, depth, latitude, longitude
 print(ds.thetao.attrs)       # Should show units: degrees_C
 print(ds.depth.values[:10])  # First 10 native depth levels
 print(f"Grid shape: {ds.thetao.shape}")  # Should be ~(1, 50, 840, 1320)
 ```
 
-> **Success criteria:** You see a ~400MB NetCDF file in `fabric/raw/` with 5 variables, 50 depth levels, covering the Indian Ocean BBOX.
+> **Success criteria:** You see a ~400MB NetCDF file in `fabric/raw/` with 9 variables, 50 depth levels, covering the Indian Ocean BBOX.
 
 ---
 
@@ -117,7 +117,7 @@ def validate_glorys(nc_path: Path) -> xr.Dataset:
     errors = []
 
     # 1. Check required variables exist
-    required = {"thetao", "so", "uo", "vo", "zos"}
+    required = {"thetao", "so", "uo", "vo", "zos", "mlotst", "bottomT", "siconc", "sithick"}
     missing = required - set(ds.data_vars)
     if missing:
         errors.append(f"Missing variables: {missing}")
@@ -184,6 +184,10 @@ def convert_to_zarr(ds: xr.Dataset, source_name: str, revision: str) -> Path:
         "uo": "u_velocity",
         "vo": "v_velocity",
         "zos": "sea_surface_height",
+        "mlotst": "mixed_layer_depth",
+        "bottomT": "sea_floor_temperature",
+        "siconc": "sea_ice_concentration",
+        "sithick": "sea_ice_thickness"
     }
 
     manifest_vars = []

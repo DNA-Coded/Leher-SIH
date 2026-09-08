@@ -5,6 +5,7 @@ Run this script in your terminal to manually input ocean parameters and see the 
 import numpy as np
 import xgboost as xgb
 from pathlib import Path
+import pyttsx3
 
 # Paths to the trained models and features
 CYCLONE_MODEL_PATH = Path("fabric/ml/anomaly_model.json")
@@ -74,8 +75,14 @@ def main():
         surface_uo = row["surface_uo"]
         surface_vo = row["surface_vo"]
         vorticity = row["vorticity"]
-        zos = np.nan
-        mlotst = np.nan
+        surface_salinity = row["surface_salinity"]  # Fetched! (so)
+        
+        # Placeholders for variables that require the live Copernicus API connection
+        zos = np.nan       # Sea-surface height above geoid
+        mlotst = np.nan    # Density mixed-layer thickness
+        bottomT = np.nan   # Sea-floor temperature
+        siconc = np.nan    # Sea-ice concentration (Not applicable in Indian Ocean)
+        sithick = np.nan   # Sea-ice thickness
         
         # Calculate coastal proximity
         if 8.0 <= target_lat <= 22.0 and 80.0 <= target_lon <= 100.0:
@@ -113,9 +120,16 @@ def main():
         print(f"📍 FETCHED OCEAN DATA FOR {target_lat}°N, {target_lon}°E")
         print("=" * 60)
         print(f"Data Point Matched  : {row['latitude']:.2f}°N, {row['longitude']:.2f}°E (Distance: {closest_dist_deg*111:.0f} km)")
-        print(f"Surface Temp (SST)  : {sst:.2f} °C")
+        print(f"Surface Temp (thetao): {sst:.2f} °C")
+        print(f"Salinity (so)       : {surface_salinity:.2f} PSU")
         print(f"Current Speed       : {current_speed:.2f} m/s")
+        print(f"Eastward Curr (uo)  : {surface_uo:.2f} m/s")
+        print(f"Northward Curr (vo) : {surface_vo:.2f} m/s")
         print(f"Thermal Contrast    : {thermal_contrast:.2f} °C")
+        print(f"Sea Sfc Height (zos): [Awaiting Live Copernicus API]")
+        print(f"Mixed Layer (mlotst): [Awaiting Live Copernicus API]")
+        print(f"Bottom Temp (bottomT): [Awaiting Live Copernicus API]")
+        print(f"Sea Ice (siconc)    : [Not Applicable in Indian Ocean]")
         
         print("\n" + "=" * 60)
         print(f"🤖 RAKSHAK INTELLIGENCE PREDICTIONS")
@@ -125,6 +139,22 @@ def main():
         print(f"Predicted Surge     : {surge_height:.2f} meters")
         print(f"Fishing Zone Status : {zone}")
         print("=" * 60)
+
+        # TTS Audio Support
+        try:
+            tts_engine = pyttsx3.init()
+            if "DANGER" in zone:
+                speech = f"Danger Zone Warning. High risk detected at {target_lat} North, {target_lon} East. Cyclone probability is {cyclone_prob * 100:.0f} percent."
+            elif "CAUTION" in zone:
+                speech = "Caution Zone. Proceed with care. Ocean currents are elevated."
+            else:
+                speech = "Safe Zone. No immediate ocean hazards detected."
+            
+            print(f"🔊 Playing Audio Advisory...")
+            tts_engine.say(speech)
+            tts_engine.runAndWait()
+        except Exception as e:
+            print(f"[Audio Error: {e}]")
 
         again = input("\nTest another coordinate? (y/n): ").strip().lower()
         if again != 'y':
