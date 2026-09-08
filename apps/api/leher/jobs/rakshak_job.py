@@ -15,6 +15,10 @@ if _jal_chakra_dir not in sys.path:
 from core.rakshak import run_rakshak
 
 _rakshak_lock = Lock()
+_execution_state = {"status": "idle"}
+
+def get_execution_status():
+    return dict(_execution_state)
 
 @contextmanager
 def safe_cwd(path):
@@ -32,13 +36,16 @@ def execute_rakshak_job():
         return {"status": "skipped", "reason": "rakshak_run_already_in_progress"}
 
     logger.info("Rakshak job started")
+    _execution_state["status"] = "running"
     try:
         with safe_cwd(REPO_ROOT):
             result = run_rakshak()
         logger.info("Rakshak job completed successfully")
+        _execution_state["status"] = "idle"
         return {"status": "success", "data": result}
     except Exception as e:
         logger.exception("Rakshak job failed: %s", str(e))
+        _execution_state["status"] = "failed"
         raise
     finally:
         _rakshak_lock.release()

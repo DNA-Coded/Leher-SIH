@@ -159,7 +159,7 @@ def test_missing_active_dataset(tmp_path, monkeypatch):
             "max_lon": 80.3
         }
     )
-    if response.status_code != 500:
+    if response.status_code != 503:
         print(f"FAILED missing active dataset: {response.status_code} {response.content}")
-    assert response.status_code == 500
+    assert response.status_code == 503
     assert "No active dataset" in response.json()["detail"].lower() or "no glorys datasets" in response.json()["detail"].lower()

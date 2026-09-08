@@ -28,3 +28,16 @@ def encode_dataset_to_arrow_ipc(ds: xr.Dataset, variable: str) -> bytes:
         writer.write_table(table)
         
     return sink.getvalue().to_pybytes()
+
+def encode_polars_to_arrow_ipc(df: pl.DataFrame) -> bytes:
+    """
+    Converts a Polars DataFrame directly to an Apache Arrow IPC stream.
+    Used for hazards and other tabular ML outputs.
+    """
+    table = df.to_arrow()
+    
+    sink = pa.BufferOutputStream()
+    with pa.RecordBatchStreamWriter(sink, table.schema) as writer:
+        writer.write_table(table)
+        
+    return sink.getvalue().to_pybytes()

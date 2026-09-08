@@ -39,7 +39,7 @@ def get_model_slice(
     max_lat: float = Query(..., description="Maximum latitude bounding box"),
     min_lon: float = Query(..., description="Minimum longitude bounding box"),
     max_lon: float = Query(..., description="Maximum longitude bounding box"),
-    resolution: float = Query(0.25, description="Requested spatial grid resolution (informational for current version)")
+    resolution: float = Query(0.25, description="Requested spatial grid resolution (informational only for current version; data is returned at native model resolution)")
 ):
     # Validation
     if depth_m < 0:
@@ -139,7 +139,7 @@ def get_model_slice(
         return Response(content=payload, media_type="application/vnd.apache.arrow.stream", headers=headers)
         
     except (NoActiveDatasetError, MultipleActiveDatasetsError) as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e))
     except MissingZarrVariableError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except (InvalidDepthError, InvalidTimeError) as e:
