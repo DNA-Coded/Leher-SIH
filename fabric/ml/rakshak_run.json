@@ -1,0 +1,15 @@
+{
+  "run_at": "2026-09-08T15:55:08.708691+00:00",
+  "n_cyclone_events": 4240,
+  "n_surge_events": 146,
+  "n_tide_events": 0,
+  "n_zones": 31159,
+  "n_safe": 11150,
+  "n_caution": 8353,
+  "n_danger": 11656,
+  "outputs": {
+    "hazards": "fabric\\ml\\hazards.parquet",
+    "safe_zones_geojson": "fabric\\ml\\safe_zones.geojson",
+    "safe_zones_parquet": "fabric\\ml\\safe_zones.parquet"
+  }
+}

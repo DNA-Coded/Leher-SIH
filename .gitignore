@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+
+# Data and large files (GitHub max file size is 100MB)
+*.nc
+*.parquet
+data/
+# Keep the ML output folder structure but ignore the huge data files
+fabric/ml/*.parquet
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+.DS_Store

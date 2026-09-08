@@ -1,0 +1,15 @@
+{
+  "mae_meters": 0.0029,
+  "r2_score": 0.9976,
+  "n_test": 106949,
+  "feature_cols": [
+    "sst",
+    "current_speed",
+    "surface_uo",
+    "surface_vo",
+    "coastal_proximity",
+    "zos"
+  ],
+  "label_col": "surge_height_m",
+  "note": "Proxy labels used. Replace with IMD tide gauge heights for production."
+}

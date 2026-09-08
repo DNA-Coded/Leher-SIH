@@ -1,0 +1,28 @@
+{
+  "auc_roc": 1.0,
+  "f1_score": 0.9964,
+  "n_test_positives": 51614,
+  "n_test_negatives": 244516,
+  "confusion_matrix": [
+    [
+      244139,
+      377
+    ],
+    [
+      0,
+      51614
+    ]
+  ],
+  "feature_cols": [
+    "sst",
+    "temp_100m",
+    "thermal_contrast",
+    "current_speed",
+    "surface_uo",
+    "surface_vo",
+    "vorticity",
+    "zos",
+    "mlotst"
+  ],
+  "best_iteration": 207
+}
