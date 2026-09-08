@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-The entire **Rakshak Intelligence** ML pipeline is **complete and production-ready**. It consists of **5 interconnected engines** that process raw Copernicus Marine ocean data and produce actionable outputs: hazard events, fishing zone classifications, tide anomalies, and multilingual voice advisories.
+The entire **Rakshak Intelligence** ML pipeline is **complete and production-ready**. It consists of **6 interconnected engines** that process raw Copernicus Marine ocean data and produce actionable outputs: hazard events, fishing zone classifications, tide anomalies, multilingual voice advisories, and marine ecosystem health.
 
 Everything the backend developer needs lives inside two directories:
 - **`services/jal-chakra/`** - All Python source code (pipeline, models, engines)
@@ -18,8 +18,8 @@ Everything the backend developer needs lives inside two directories:
 The backend developer's job is to:
 1. **Wire the ML outputs into FastAPI routes** (defined in LeherGuide.md Section 12)
 2. **Schedule `rakshak.py` to run every hour** via APScheduler
-3. **Serve the output files** (`hazards.parquet`, `safe_zones.geojson`, `advisories.json`) over the REST API
-4. **Connect live Copernicus data** to replace the training-time NaN placeholders for `zos`, `mlotst`, `bottomT`
+3. **Serve the output files** (`hazards.parquet`, `safe_zones.geojson`, `advisories.json`, `ecosystem.json`) over the REST API
+4. **Connect live Copernicus data** to replace the training-time NaN placeholders for `zos`, `mlotst`, `bottomT`, `chl`
 
 ---
 
@@ -42,6 +42,7 @@ Leher/
 │       │   ├── safe_zones.py             <-- Engine 4: Risk scoring to GeoJSON
 │       │   ├── tides.py                  <-- Engine 3: Extreme tide detection
 │       │   ├── voice_advisory.py         <-- Engine 5: Multilingual warnings
+│       │   ├── ecosystem.py              <-- Engine 6: Marine ecosystem health
 │       │   ├── rakshak.py                <-- ORCHESTRATOR (call this)
 │       │   ├── pipeline.py               <-- Jal Chakra pipeline skeleton
 │       │   ├── validator.py              <-- Pariksha (CF validation)
@@ -62,6 +63,7 @@ Leher/
 │       ├── safe_zones.geojson            <-- Fishing zone map (runtime output)
 │       ├── safe_zones.parquet            <-- Same, for DuckDB queries
 │       ├── advisories.json               <-- Voice advisory payloads (runtime output)
+│       ├── ecosystem.json                <-- Ecosystem health data (runtime output)
 │       ├── rakshak_run.json              <-- Last run metadata
 │       ├── ibtracs_indian_ocean.csv      <-- Historical cyclone tracks (training)
 │       ├── features_unlabeled.parquet    <-- Raw feature matrix (83MB)
@@ -76,7 +78,7 @@ Leher/
 
 ---
 
-## 3. The 5 Rakshak Intelligence Engines
+## 3. The 6 Rakshak Intelligence Engines
 
 ### Engine 1: Cyclone Detection and Genesis (XGBoost Classifier)
 
@@ -198,6 +200,28 @@ For every hazard event, generates a text advisory payload in **3 languages** (En
 
 ---
 
+### Engine 6: Marine Ecosystem Health Index (Composite Model)
+
+| Item | Detail |
+|------|--------|
+| **File** | `services/jal-chakra/core/ecosystem.py` |
+| **Output** | `fabric/ml/ecosystem.json` |
+| **Algorithm** | Weighted rule-based composite scoring |
+
+Computes an **Ecosystem Stress Score (0-100)** for every grid cell by running 4 scientifically-grounded sub-models:
+1. **Coral Bleaching Risk (30%)**: Uses NOAA thermal stress logic (`sst` vs threshold)
+2. **Harmful Algal Bloom (HAB) Risk (25%)**: Driven by warm, stagnant water (`sst`, `current_speed`, `salinity`, `chl`)
+3. **Fish Migration Stress (25%)**: Fish pushed deeper by heat stress & strong currents (`sst`, `thermal_contrast`, `current_speed`)
+4. **Hypoxia / Dead Zone Risk (20%)**: Dissolved oxygen depletion proxy (`sst`, `current_speed`)
+
+**Output is mapped to:**
+- **HEALTHY** (Green): Score < 30
+- **MODERATE** (Yellow): 30 <= Score < 50
+- **STRESSED** (Orange): 50 <= Score < 70
+- **CRITICAL** (Red): Score >= 70
+
+---
+
 ## 4. Complete Ocean Variables Catalog
 
 These are all the Copernicus Marine variables the system ingests or is designed to ingest:
@@ -213,6 +237,7 @@ These are all the Copernicus Marine variables the system ingests or is designed 
 | `bottomT` | Sea-floor temperature | deg C | Pending | Frontend display |
 | `siconc` | Sea-ice concentration | % | Pending | Frontend display |
 | `sithick` | Sea-ice thickness | m | Pending | Frontend display |
+| `chl` | mass_concentration_of_chlorophyll_a | mg m-3 | Pending | Engine 6 (HAB Risk) |
 
 > **"Pending" does NOT mean broken.** XGBoost handles NaN natively. The models are already trained to gracefully handle these missing values. When you connect the live Copernicus API and these variables start flowing in, model accuracy will automatically improve without retraining.
 
@@ -358,7 +383,40 @@ Standard GeoJSON FeatureCollection. Each Feature is a Point at the center of a 0
 }
 ```
 
-### 6.4 fabric/ml/rakshak_run.json
+### 6.4 fabric/ml/ecosystem.json
+
+Contains the 0-100 composite stress scores for every cell.
+
+```json
+{
+  "generated_at": "2026-09-08T15:55:08Z",
+  "total_cells": 31159,
+  "summary": {
+    "n_healthy": 15000,
+    "n_moderate": 10000,
+    "n_stressed": 5000,
+    "n_critical": 1159,
+    "avg_stress_score": 32.5
+  },
+  "cells": [
+    {
+      "lat": 15.0,
+      "lon": 85.0,
+      "ecosystem_stress_score": 14,
+      "ecosystem_status": "HEALTHY",
+      "color": "#00C853",
+      "sst": 28.79,
+      "current_speed": 0.14,
+      "coral_bleaching": {"score": 0, "level": "NO_STRESS"},
+      "harmful_algal_bloom": {"score": 36, "level": "MODERATE"},
+      "fish_stress": {"score": 22, "level": "HEALTHY"},
+      "hypoxia_risk": {"score": 0, "level": "NORMAL"}
+    }
+  ]
+}
+```
+
+### 6.5 fabric/ml/rakshak_run.json
 
 Metadata from the last run. Use this to show "Last scan: X minutes ago" in the UI.
 
@@ -375,6 +433,7 @@ Per LeherGuide.md Section 12, the Rakshak ML outputs are served through these AP
 | `GET` | `/api/v1/ml/events` | Read `hazards.parquet` as JSON array |
 | `GET` | `/api/v1/ml/events/{id}` | Filter `hazards.parquet` by event_id + join with `advisories.json` |
 | `GET` | `/api/v1/ml/zones` | Serve `safe_zones.geojson` directly (already valid GeoJSON) |
+| `GET` | `/api/v1/ml/ecosystem` | Serve `ecosystem.json` |
 | `POST` | `/api/v1/ml/voice_advisory` | Look up advisory from `advisories.json`, pipe text through TTS API |
 
 ### APScheduler Integration
