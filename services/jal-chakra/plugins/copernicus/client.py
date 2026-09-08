@@ -7,10 +7,16 @@ def acquire_glorys_data(
     output_dir: Path,
     start_datetime: str,
     end_datetime: str,
-    output_filename: str = None
+    output_filename: str = None,
+    min_lon: float = 20.0,
+    max_lon: float = 130.0,
+    min_lat: float = -40.0,
+    max_lat: float = 30.0,
+    min_depth: float = 0.0,
+    max_depth: float = 5500.0,
 ) -> Path:
     """
-    UTPATTI Stage: Acquires a bounded subset of GLORYS12 data for the Indian Ocean.
+    UTPATTI Stage: Acquires a bounded subset of GLORYS12 data.
     
     This function acts as the safe boundary to the Copernicus Marine API.
     It enforces the geographic and variable constraints defined in LeherGuide.md.
@@ -40,12 +46,12 @@ def acquire_glorys_data(
     copernicusmarine.subset(
         dataset_id="cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
         variables=["thetao", "so", "uo", "vo", "zos", "mlotst", "bottomT", "siconc", "sithick"],
-        minimum_longitude=20.0,
-        maximum_longitude=130.0,
-        minimum_latitude=-40.0,
-        maximum_latitude=30.0,
-        minimum_depth=0.0,
-        maximum_depth=5500.0,
+        minimum_longitude=min_lon,
+        maximum_longitude=max_lon,
+        minimum_latitude=min_lat,
+        maximum_latitude=max_lat,
+        minimum_depth=min_depth,
+        maximum_depth=max_depth,
         start_datetime=start_datetime,
         end_datetime=end_datetime,
         output_filename=output_filename,
