@@ -243,8 +243,10 @@ def compute_safe_zones(
     for row in rows:
         lat = row["lat_grid"]
         lon = row["lon_grid"]
-        sst = row.get("sst", float("nan"))
-        speed = row.get("current_speed", float("nan"))
+        sst = row.get("sst")
+        sst = float("nan") if sst is None else sst
+        speed = row.get("current_speed")
+        speed = float("nan") if speed is None else speed
 
         if np.isnan(sst) or np.isnan(speed):
             continue  # Land or missing data — skip

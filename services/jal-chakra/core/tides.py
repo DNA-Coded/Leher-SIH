@@ -60,7 +60,7 @@ def detect_extreme_tides(surface_df: pl.DataFrame) -> list[dict]:
             "latitude": float(row["lat_grid"]),
             "longitude": float(row["lon_grid"]),
             "residual_height_m": round(float(row["tidal_residual_m"]), 3),
-            "sst": round(float(row["sst"]), 2) if not np.isnan(row["sst"]) else None,
+            "sst": round(float(row["sst"]), 2) if row["sst"] is not None and not np.isnan(row["sst"]) else None,
             "detected_at": timestamp,
         })
 

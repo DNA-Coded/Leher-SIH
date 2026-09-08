@@ -178,10 +178,14 @@ def compute_ecosystem_health(grid_df: pl.DataFrame) -> list[dict]:
     for row in rows:
         lat = row["lat_grid"]
         lon = row["lon_grid"]
-        sst = row.get("sst", float("nan"))
-        speed = row.get("current_speed", float("nan"))
-        salinity = row.get("surface_salinity", float("nan")) if "surface_salinity" in row else float("nan")
-        thermal_contrast = row.get("thermal_contrast", 0.0) if "thermal_contrast" in row else 0.0
+        sst = row.get("sst")
+        sst = float("nan") if sst is None else sst
+        speed = row.get("current_speed")
+        speed = float("nan") if speed is None else speed
+        salinity = row.get("surface_salinity")
+        salinity = float("nan") if salinity is None else salinity
+        thermal_contrast = row.get("thermal_contrast")
+        thermal_contrast = 0.0 if thermal_contrast is None else thermal_contrast
 
         if np.isnan(sst) or np.isnan(speed):
             continue  # Skip land / missing

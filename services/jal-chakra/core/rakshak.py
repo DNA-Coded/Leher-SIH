@@ -188,8 +188,8 @@ def run_cyclone_scan(
                 "latitude": float(row["lat_grid"]),
                 "longitude": float(row["lon_grid"]),
                 "probability": round(float(prob), 4),
-                "sst": round(float(row["sst"]), 2) if not np.isnan(row["sst"]) else None,
-                "current_speed": round(float(row["current_speed"]), 3),
+                "sst": round(float(row["sst"]), 2) if row["sst"] is not None and not np.isnan(row["sst"]) else None,
+                "current_speed": round(float(row["current_speed"]), 3) if row["current_speed"] is not None and not np.isnan(row["current_speed"]) else None,
                 "detected_at": timestamp,
             })
 
@@ -226,7 +226,7 @@ def run_surge_scan(
                 "latitude": float(row["lat_grid"]),
                 "longitude": float(row["lon_grid"]),
                 "surge_height_m": round(float(height), 3),
-                "current_speed": round(float(row["current_speed"]), 3),
+                "current_speed": round(float(row["current_speed"]), 3) if row["current_speed"] is not None and not np.isnan(row["current_speed"]) else None,
                 "detected_at": timestamp,
             })
 
