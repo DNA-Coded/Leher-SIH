@@ -351,6 +351,7 @@ This is the primary physics data source. It provides:
 | `bottomT` | sea_water_potential_temperature_at_sea_floor | °C | Sea-floor temperature |
 | `siconc` | sea_ice_area_fraction | % | Sea-ice concentration |
 | `sithick` | sea_ice_thickness | m | Sea-ice thickness |
+| `chl` | mass_concentration_of_chlorophyll_a | mg m⁻³ | Chlorophyll-a concentration (from biogeochemistry model) |
 
 GLORYS12 has 50 vertical levels from 0.5m to 5727.9m. These native levels are preserved in the Zarr store and are not interpolated to arbitrary user-defined depths. Instead, depth requests are resolved to the nearest native level.
 

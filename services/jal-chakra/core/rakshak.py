@@ -46,6 +46,7 @@ else:
 if __package__:
     from .tides import detect_extreme_tides
     from .voice_advisory import generate_advisories
+    from .ecosystem import run_ecosystem_analysis
 else:
     _t_path = _P(__file__).parent / "tides.py"
     _t_spec = _ilu.spec_from_file_location("tides", _t_path)
@@ -59,12 +60,19 @@ else:
     _v_spec.loader.exec_module(_v)
     generate_advisories = _v.generate_advisories
 
+    _e_path = _P(__file__).parent / "ecosystem.py"
+    _e_spec = _ilu.spec_from_file_location("ecosystem", _e_path)
+    _e = _ilu.module_from_spec(_e_spec)
+    _e_spec.loader.exec_module(_e)
+    run_ecosystem_analysis = _e.run_ecosystem_analysis
+
 PARQUET_DIR    = Path("data/ml_training_dataset.parquet")
 CYCLONE_MODEL  = Path("fabric/ml/anomaly_model.json")
 SURGE_MODEL    = Path("fabric/ml/surge_model.json")
 HAZARDS_OUT    = Path("fabric/ml/hazards.parquet")
 ZONES_GEOJSON  = Path("fabric/ml/safe_zones.geojson")
 ZONES_PARQUET  = Path("fabric/ml/safe_zones.parquet")
+ECOSYSTEM_OUT  = Path("fabric/ml/ecosystem.json")
 RUN_META_OUT   = Path("fabric/ml/rakshak_run.json")
 
 # Cyclone detection threshold (from LeherGuide.md Section 21)
@@ -273,7 +281,11 @@ def run_rakshak(
     # Step 6.5: Voice Advisories (Engine 5)
     advisories = generate_advisories(all_hazards)
 
-    # Step 7: Write run metadata
+    # Step 7: Ecosystem Health Analysis (Engine 6)
+    print("[RAKSHAK] Running Marine Ecosystem Health Analysis...")
+    eco_result = run_ecosystem_analysis(grid_df)
+
+    # Step 8: Write run metadata
     result = {
         "run_at": datetime.now(timezone.utc).isoformat(),
         "n_cyclone_events": len(cyclone_events),
@@ -283,10 +295,12 @@ def run_rakshak(
         "n_safe": geojson["metadata"]["n_safe"],
         "n_caution": geojson["metadata"]["n_caution"],
         "n_danger": geojson["metadata"]["n_danger"],
+        "ecosystem": eco_result.get("summary", {}),
         "outputs": {
             "hazards": str(HAZARDS_OUT),
             "safe_zones_geojson": str(ZONES_GEOJSON),
             "safe_zones_parquet": str(ZONES_PARQUET),
+            "ecosystem": str(ECOSYSTEM_OUT),
         },
     }
     RUN_META_OUT.write_text(json.dumps(result, indent=2))
@@ -301,6 +315,8 @@ def run_rakshak(
     print(f"  Caution zones  : {geojson['metadata']['n_caution']}")
     print(f"  Danger zones   : {geojson['metadata']['n_danger']}")
     print(f"  Voice Warnings : {len(advisories)}")
+    print(f"  Ecosystem Cells: {eco_result.get('total_cells', 0)}")
+    print(f"  Avg Stress     : {eco_result.get('summary', {}).get('avg_stress_score', 0)}")
     print("=" * 55)
 
     return result

@@ -187,7 +187,8 @@ def convert_to_zarr(ds: xr.Dataset, source_name: str, revision: str) -> Path:
         "mlotst": "mixed_layer_depth",
         "bottomT": "sea_floor_temperature",
         "siconc": "sea_ice_concentration",
-        "sithick": "sea_ice_thickness"
+        "sithick": "sea_ice_thickness",
+        "chl": "chlorophyll_a"
     }
 
     manifest_vars = []

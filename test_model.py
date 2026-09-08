@@ -6,6 +6,18 @@ import numpy as np
 import xgboost as xgb
 from pathlib import Path
 import pyttsx3
+import sys, os
+import importlib.util
+
+_e_path = Path(__file__).parent / "services" / "jal-chakra" / "core" / "ecosystem.py"
+_e_spec = importlib.util.spec_from_file_location("ecosystem", _e_path)
+ecosystem = importlib.util.module_from_spec(_e_spec)
+_e_spec.loader.exec_module(ecosystem)
+
+compute_coral_bleaching_risk = ecosystem.compute_coral_bleaching_risk
+compute_hab_risk = ecosystem.compute_hab_risk
+compute_fish_stress = ecosystem.compute_fish_stress
+compute_hypoxia_risk = ecosystem.compute_hypoxia_risk
 
 # Paths to the trained models and features
 CYCLONE_MODEL_PATH = Path("fabric/ml/anomaly_model.json")
@@ -129,6 +141,7 @@ def main():
         print(f"Sea Sfc Height (zos): [Awaiting Live Copernicus API]")
         print(f"Mixed Layer (mlotst): [Awaiting Live Copernicus API]")
         print(f"Bottom Temp (bottomT): [Awaiting Live Copernicus API]")
+        print(f"Chlorophyll (chl)   : [Awaiting Live Copernicus Bio API]")
         print(f"Sea Ice (siconc)    : [Not Applicable in Indian Ocean]")
         
         print("\n" + "=" * 60)
@@ -138,6 +151,33 @@ def main():
         print(f"Cyclone Probability : {cyclone_prob * 100:.2f}%")
         print(f"Predicted Surge     : {surge_height:.2f} meters")
         print(f"Fishing Zone Status : {zone}")
+
+        # --- Engine 6: Ecosystem Health ---
+        coral = compute_coral_bleaching_risk(sst)
+        hab = compute_hab_risk(sst, current_speed, surface_salinity)
+        fish = compute_fish_stress(sst, thermal_contrast, current_speed)
+        hypoxia = compute_hypoxia_risk(sst, current_speed)
+        eco_score = round(
+            coral["score"] * 0.30 + hab["score"] * 0.25 +
+            fish["score"] * 0.25 + hypoxia["score"] * 0.20
+        )
+        if eco_score >= 70:
+            eco_status = "🔴 CRITICAL"
+        elif eco_score >= 50:
+            eco_status = "🟠 STRESSED"
+        elif eco_score >= 30:
+            eco_status = "🟡 MODERATE"
+        else:
+            eco_status = "🟢 HEALTHY"
+
+        print("\n" + "=" * 60)
+        print(f"🏝️  MARINE ECOSYSTEM HEALTH ANALYSIS")
+        print("=" * 60)
+        print(f"Ecosystem Score     : {eco_score}/100 ({eco_status})")
+        print(f"Coral Bleaching     : {coral['score']}/100 ({coral['level']})")
+        print(f"Algal Bloom Risk    : {hab['score']}/100 ({hab['level']})")
+        print(f"Fish Stress         : {fish['score']}/100 ({fish['level']})")
+        print(f"Hypoxia Risk        : {hypoxia['score']}/100 ({hypoxia['level']})")
         print("=" * 60)
 
         # TTS Audio Support
